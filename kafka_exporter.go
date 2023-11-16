@@ -34,8 +34,11 @@ const (
 )
 
 const (
-	INFO  = 0
+	// INFO TODO
+	INFO = 0
+	// DEBUG TODO
 	DEBUG = 1
+	// TRACE TODO
 	TRACE = 2
 )
 
@@ -137,6 +140,7 @@ func CanReadCertAndKey(certPath, keyPath string) (bool, error) {
 	return true, nil
 }
 
+// canReadFile TODO
 // If the file represented by path exists and
 // readable, returns true otherwise returns false.
 func canReadFile(path string) bool {
@@ -151,7 +155,8 @@ func canReadFile(path string) bool {
 }
 
 // NewExporter returns an initialized Exporter.
-func NewExporter(opts kafkaOpts, topicFilter string, topicExclude string, groupFilter string, groupExclude string) (*Exporter, error) {
+func NewExporter(opts kafkaOpts, topicFilter string, topicExclude string, groupFilter string,
+	groupExclude string) (*Exporter, error) {
 	var zookeeperClient *kazoo.Kazoo
 	config := sarama.NewConfig()
 	config.ClientID = clientID
@@ -166,10 +171,16 @@ func NewExporter(opts kafkaOpts, topicFilter string, topicExclude string, groupF
 		opts.saslMechanism = strings.ToLower(opts.saslMechanism)
 		switch opts.saslMechanism {
 		case "scram-sha512":
-			config.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient { return &XDGSCRAMClient{HashGeneratorFcn: SHA512} }
+			config.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient {
+				return &XDGSCRAMClient{
+					HashGeneratorFcn: SHA512}
+			}
 			config.Net.SASL.Mechanism = sarama.SASLMechanism(sarama.SASLTypeSCRAMSHA512)
 		case "scram-sha256":
-			config.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient { return &XDGSCRAMClient{HashGeneratorFcn: SHA256} }
+			config.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient {
+				return &XDGSCRAMClient{
+					HashGeneratorFcn: SHA256}
+			}
 			config.Net.SASL.Mechanism = sarama.SASLMechanism(sarama.SASLTypeSCRAMSHA256)
 		case "gssapi":
 			config.Net.SASL.Mechanism = sarama.SASLMechanism(sarama.SASLTypeGSSAPI)
@@ -283,7 +294,7 @@ func NewExporter(opts kafkaOpts, topicFilter string, topicExclude string, groupF
 	}, nil
 }
 
-//func (e *Exporter) fetchOffsetVersion() int16 {
+// func (e *Exporter) fetchOffsetVersion() int16 {
 //	version := e.client.Config().Version
 //	if e.client.Config().Version.IsAtLeast(sarama.V2_0_0_0) {
 //		return 4
@@ -293,7 +304,7 @@ func NewExporter(opts kafkaOpts, topicFilter string, topicExclude string, groupF
 //		return 1
 //	}
 //	return 0
-//}
+// }
 
 // Describe describes all the metrics ever exported by the Kafka exporter. It
 // implements prometheus.Collector.
@@ -451,7 +462,8 @@ func (e *Exporter) collect(ch chan<- prometheus.Metric) {
 				klog.Errorf("Cannot get replicas of topic %s partition %d: %v", topic, partition, err)
 			} else {
 				ch <- prometheus.MustNewConstMetric(
-					topicPartitionReplicas, prometheus.GaugeValue, float64(len(replicas)), topic, strconv.FormatInt(int64(partition), 10),
+					topicPartitionReplicas, prometheus.GaugeValue, float64(len(replicas)), topic, strconv.FormatInt(int64(partition),
+						10),
 				)
 			}
 
@@ -460,17 +472,20 @@ func (e *Exporter) collect(ch chan<- prometheus.Metric) {
 				klog.Errorf("Cannot get in-sync replicas of topic %s partition %d: %v", topic, partition, err)
 			} else {
 				ch <- prometheus.MustNewConstMetric(
-					topicPartitionInSyncReplicas, prometheus.GaugeValue, float64(len(inSyncReplicas)), topic, strconv.FormatInt(int64(partition), 10),
+					topicPartitionInSyncReplicas, prometheus.GaugeValue, float64(len(inSyncReplicas)), topic,
+					strconv.FormatInt(int64(partition), 10),
 				)
 			}
 
 			if broker != nil && replicas != nil && len(replicas) > 0 && broker.ID() == replicas[0] {
 				ch <- prometheus.MustNewConstMetric(
-					topicPartitionUsesPreferredReplica, prometheus.GaugeValue, float64(1), topic, strconv.FormatInt(int64(partition), 10),
+					topicPartitionUsesPreferredReplica, prometheus.GaugeValue, float64(1), topic, strconv.FormatInt(int64(partition),
+						10),
 				)
 			} else {
 				ch <- prometheus.MustNewConstMetric(
-					topicPartitionUsesPreferredReplica, prometheus.GaugeValue, float64(0), topic, strconv.FormatInt(int64(partition), 10),
+					topicPartitionUsesPreferredReplica, prometheus.GaugeValue, float64(0), topic, strconv.FormatInt(int64(partition),
+						10),
 				)
 			}
 
@@ -497,7 +512,8 @@ func (e *Exporter) collect(ch chan<- prometheus.Metric) {
 
 						consumerGroupLag := currentOffset - offset
 						ch <- prometheus.MustNewConstMetric(
-							consumergroupLagZookeeper, prometheus.GaugeValue, float64(consumerGroupLag), group.Name, topic, strconv.FormatInt(int64(partition), 10),
+							consumergroupLagZookeeper, prometheus.GaugeValue, float64(consumerGroupLag), group.Name, topic,
+							strconv.FormatInt(int64(partition), 10),
 						)
 					}
 				}
@@ -624,7 +640,8 @@ func (e *Exporter) collect(ch chan<- prometheus.Metric) {
 					currentOffset := offsetFetchResponseBlock.Offset
 					currentOffsetSum += currentOffset
 					ch <- prometheus.MustNewConstMetric(
-						consumergroupCurrentOffset, prometheus.GaugeValue, float64(currentOffset), group.GroupId, topic, strconv.FormatInt(int64(partition), 10),
+						consumergroupCurrentOffset, prometheus.GaugeValue, float64(currentOffset), group.GroupId, topic,
+						strconv.FormatInt(int64(partition), 10),
 					)
 					e.mu.Lock()
 					if offset, ok := offset[topic][partition]; ok {
@@ -638,7 +655,8 @@ func (e *Exporter) collect(ch chan<- prometheus.Metric) {
 							lagSum += lag
 						}
 						ch <- prometheus.MustNewConstMetric(
-							consumergroupLag, prometheus.GaugeValue, float64(lag), group.GroupId, topic, strconv.FormatInt(int64(partition), 10),
+							consumergroupLag, prometheus.GaugeValue, float64(lag), group.GroupId, topic, strconv.FormatInt(int64(partition),
+								10),
 						)
 					} else {
 						klog.Errorf("No offset of topic %s partition %d, cannot get consumer group lag", topic, partition)
@@ -672,11 +690,12 @@ func init() {
 	prometheus.MustRegister(version.NewCollector("kafka_exporter"))
 }
 
-//func toFlag(name string, help string) *kingpin.FlagClause {
+// func toFlag(name string, help string) *kingpin.FlagClause {
 //	flag.CommandLine.String(name, "", help) // hack around flag.Parse and klog.init flags
 //	return kingpin.Flag(name, help)
-//}
+// }
 
+// toFlagString TODO
 // hack around flag.Parse and klog.init flags
 func toFlagString(name string, help string, value string) *string {
 	flag.CommandLine.String(name, value, help) // hack around flag.Parse and klog.init flags
@@ -722,37 +741,61 @@ func main() {
 	)
 
 	toFlagStringsVar("kafka.server", "Address (host:port) of Kafka server.", "kafka:9092", &opts.uri)
-	toFlagBoolVar("sasl.enabled", "Connect using SASL/PLAIN, default is false.", false, "false", &opts.useSASL)
-	toFlagBoolVar("sasl.handshake", "Only set this to false if using a non-Kafka SASL proxy, default is true.", true, "true", &opts.useSASLHandshake)
-	toFlagStringVar("sasl.username", "SASL user name.", "", &opts.saslUsername)
-	toFlagStringVar("sasl.password", "SASL user password.", "", &opts.saslPassword)
-	toFlagStringVar("sasl.mechanism", "The SASL SCRAM SHA algorithm sha256 or sha512 or gssapi as mechanism", "", &opts.saslMechanism)
+	// toFlagBoolVar("sasl.enabled", "Connect using SASL/PLAIN, default is false.", false, "false", &opts.useSASL)
+	kingpin.Flag("sasl.enabled", "Connect using SASL/PLAIN.").Default("false").Envar("SASL_ENABLED").BoolVar(&opts.useSASL)
+	toFlagBoolVar("sasl.handshake", "Only set this to false if using a non-Kafka SASL proxy, default is true.", true,
+		"true", &opts.useSASLHandshake)
+	/*
+		toFlagStringVar("sasl.username", "SASL user name.", "", &opts.saslUsername)
+		toFlagStringVar("sasl.password", "SASL user password.", "", &opts.saslPassword)
+		toFlagStringVar("sasl.mechanism", "The SASL SCRAM SHA algorithm sha256 or sha512 or gssapi as mechanism", "",
+			&opts.saslMechanism)
+	*/
+	kingpin.Flag("sasl.username", "SASL user name.").Default("").Envar("SASL_USERNAME").StringVar(&opts.saslUsername)
+	kingpin.Flag("sasl.password", "SASL user password.").Default("").Envar("SASL_PASSWORD").StringVar(&opts.saslPassword)
+	kingpin.Flag("sasl.mechanism", "The SASL SCRAM SHA algorithm sha256 or sha512 or gssapi as mechanism").Default("").
+		Envar("SASL_MECHANISM").StringVar(&opts.saslMechanism)
 	toFlagStringVar("sasl.service-name", "Service name when using kerberos Auth", "", &opts.serviceName)
 	toFlagStringVar("sasl.kerberos-config-path", "Kerberos config path", "", &opts.kerberosConfigPath)
 	toFlagStringVar("sasl.realm", "Kerberos realm", "", &opts.realm)
-	toFlagStringVar("sasl.kerberos-auth-type", "Kerberos auth type. Either 'keytabAuth' or 'userAuth'", "", &opts.kerberosAuthType)
+	toFlagStringVar("sasl.kerberos-auth-type", "Kerberos auth type. Either 'keytabAuth' or 'userAuth'", "",
+		&opts.kerberosAuthType)
 	toFlagStringVar("sasl.keytab-path", "Kerberos keytab file path", "", &opts.keyTabPath)
-	toFlagBoolVar("sasl.disable-PA-FX-FAST", "Configure the Kerberos client to not use PA_FX_FAST, default is false.", false, "false", &opts.saslDisablePAFXFast)
+	toFlagBoolVar("sasl.disable-PA-FX-FAST", "Configure the Kerberos client to not use PA_FX_FAST, default is false.",
+		false, "false", &opts.saslDisablePAFXFast)
 	toFlagBoolVar("tls.enabled", "Connect to Kafka using TLS, default is false.", false, "false", &opts.useTLS)
-	toFlagStringVar("tls.server-name", "Used to verify the hostname on the returned certificates unless tls.insecure-skip-tls-verify is given. The kafka server's name should be given.", "", &opts.tlsServerName)
-	toFlagStringVar("tls.ca-file", "The optional certificate authority file for Kafka TLS client authentication.", "", &opts.tlsCAFile)
-	toFlagStringVar("tls.cert-file", "The optional certificate file for Kafka client authentication.", "", &opts.tlsCertFile)
+	toFlagStringVar("tls.server-name",
+		"Used to verify the hostname on the returned certificates unless tls.insecure-skip-tls-verify is given. The kafka server's name should be given.", "", &opts.tlsServerName)
+	toFlagStringVar("tls.ca-file", "The optional certificate authority file for Kafka TLS client authentication.", "",
+		&opts.tlsCAFile)
+	toFlagStringVar("tls.cert-file", "The optional certificate file for Kafka client authentication.", "",
+		&opts.tlsCertFile)
 	toFlagStringVar("tls.key-file", "The optional key file for Kafka client authentication.", "", &opts.tlsKeyFile)
 	toFlagBoolVar("server.tls.enabled", "Enable TLS for web server, default is false.", false, "false", &opts.serverUseTLS)
-	toFlagBoolVar("server.tls.mutual-auth-enabled", "Enable TLS client mutual authentication, default is false.", false, "false", &opts.serverMutualAuthEnabled)
+	toFlagBoolVar("server.tls.mutual-auth-enabled", "Enable TLS client mutual authentication, default is false.", false,
+		"false", &opts.serverMutualAuthEnabled)
 	toFlagStringVar("server.tls.ca-file", "The certificate authority file for the web server.", "", &opts.serverTlsCAFile)
 	toFlagStringVar("server.tls.cert-file", "The certificate file for the web server.", "", &opts.serverTlsCertFile)
 	toFlagStringVar("server.tls.key-file", "The key file for the web server.", "", &opts.serverTlsKeyFile)
-	toFlagBoolVar("tls.insecure-skip-tls-verify", "If true, the server's certificate will not be checked for validity. This will make your HTTPS connections insecure. Default is false", false, "false", &opts.tlsInsecureSkipTLSVerify)
-	toFlagStringVar("kafka.version", "Kafka broker version", sarama.V2_0_0_0.String(), &opts.kafkaVersion)
-	toFlagBoolVar("use.consumelag.zookeeper", "if you need to use a group from zookeeper, default is false", false, "false", &opts.useZooKeeperLag)
+	toFlagBoolVar("tls.insecure-skip-tls-verify",
+		"If true, the server's certificate will not be checked for validity. This will make your HTTPS connections insecure. Default is false", false, "false", &opts.tlsInsecureSkipTLSVerify)
+	// toFlagStringVar("kafka.version", "Kafka broker version", sarama.V2_0_0_0.String(), &opts.kafkaVersion)
+	kingpin.Flag("kafka.version", "Kafka broker version").Default(sarama.V2_0_0_0.String()).Envar("KAFKA_VERSION").
+		StringVar(&opts.kafkaVersion)
+	toFlagBoolVar("use.consumelag.zookeeper", "if you need to use a group from zookeeper, default is false", false,
+		"false", &opts.useZooKeeperLag)
 	toFlagStringsVar("zookeeper.server", "Address (hosts) of zookeeper server.", "localhost:2181", &opts.uriZookeeper)
 	toFlagStringVar("kafka.labels", "Kafka cluster name", "", &opts.labels)
 	toFlagStringVar("refresh.metadata", "Metadata refresh interval", "30s", &opts.metadataRefreshInterval)
-	toFlagBoolVar("offset.show-all", "Whether show the offset/lag for all consumer group, otherwise, only show connected consumer groups, default is true", true, "true", &opts.offsetShowAll)
-	toFlagBoolVar("concurrent.enable", "If true, all scrapes will trigger kafka operations otherwise, they will share results. WARN: This should be disabled on large clusters. Default is false", false, "false", &opts.allowConcurrent)
+	toFlagBoolVar("offset.show-all",
+		"Whether show the offset/lag for all consumer group, otherwise, only show connected consumer groups, default is true",
+		true, "true", &opts.offsetShowAll)
+	toFlagBoolVar("concurrent.enable",
+		"If true, all scrapes will trigger kafka operations otherwise, they will share results. WARN: This should be disabled on large clusters. Default is false", false, "false", &opts.allowConcurrent)
 	toFlagIntVar("topic.workers", "Number of topic workers", 100, "100", &opts.topicWorkers)
-	toFlagBoolVar("kafka.allow-auto-topic-creation", "If true, the broker may auto-create topics that we requested which do not already exist, default is false.", false, "false", &opts.allowAutoTopicCreation)
+	toFlagBoolVar("kafka.allow-auto-topic-creation",
+		"If true, the broker may auto-create topics that we requested which do not already exist, default is false.", false,
+		"false", &opts.allowAutoTopicCreation)
 	toFlagIntVar("verbosity", "Verbosity log level", 0, "0", &opts.verbosityLogLevel)
 
 	plConfig := plog.Config{}
