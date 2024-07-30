@@ -84,7 +84,7 @@ type Exporter struct {
 }
 
 type kafkaOpts struct {
-	uri                      []string
+	uri                      string
 	useSASL                  bool
 	useSASLHandshake         bool
 	saslUsername             string
@@ -265,8 +265,8 @@ func NewExporter(opts kafkaOpts, topicFilter string, topicExclude string, groupF
 	config.Metadata.RefreshFrequency = interval
 
 	config.Metadata.AllowAutoTopicCreation = opts.allowAutoTopicCreation
-
-	client, err := sarama.NewClient(opts.uri, config)
+	servers := strings.Split(opts.uri, ",")
+	client, err := sarama.NewClient(servers, config)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "Error Init Kafka Client")
@@ -727,20 +727,40 @@ func toFlagIntVar(name string, help string, value int, valueString string, targe
 	kingpin.Flag(name, help).Default(valueString).IntVar(target)
 }
 
+func getEnvOrDefault(envVar, defaultValue string) string {
+	value, exists := os.LookupEnv(envVar)
+	if !exists {
+		value = defaultValue
+	}
+	return value
+}
+
 func main() {
 	var (
 		listenAddress = toFlagString("web.listen-address", "Address to listen on for web interface and telemetry.", ":9308")
 		metricsPath   = toFlagString("web.telemetry-path", "Path under which to expose metrics.", "/metrics")
-		topicFilter   = toFlagString("topic.filter", "Regex that determines which topics to collect.", ".*")
-		topicExclude  = toFlagString("topic.exclude", "Regex that determines which topics to exclude.", "^$")
-		groupFilter   = toFlagString("group.filter", "Regex that determines which consumer groups to collect.", ".*")
-		groupExclude  = toFlagString("group.exclude", "Regex that determines which consumer groups to exclude.", "^$")
-		logSarama     = toFlagBool("log.enable-sarama", "Turn on Sarama logging, default is false.", false, "false")
+		/*
+			topicFilter   = toFlagString("topic.filter", "Regex that determines which topics to collect.", ".*")
+			topicExclude  = toFlagString("topic.exclude", "Regex that determines which topics to exclude.", "^$")
+			groupFilter   = toFlagString("group.filter", "Regex that determines which consumer groups to collect.", ".*")
+			groupExclude  = toFlagString("group.exclude", "Regex that determines which consumer groups to exclude.", "^$")
+		*/
+		topicFilter = flag.String("topic.filter", getEnvOrDefault("TOPIC_FILTER", ".*"),
+			"Regex that determines which topics to collect.")
+		topicExclude = flag.String("topic.exclude", getEnvOrDefault("TOPIC_EXCLUDE", "^$"),
+			"Regex that determines which topics to exclude.")
+		groupFilter = flag.String("group.filter", getEnvOrDefault("GROUP_FILTER", ".*"),
+			"Regex that determines which consumer groups to collect.")
+		groupExclude = flag.String("group.exclude", getEnvOrDefault("GROUP_EXCLUDE", "^$"),
+			"Regex that determines which consumer groups to exclude.")
+		logSarama = toFlagBool("log.enable-sarama", "Turn on Sarama logging, default is false.", false, "false")
 
 		opts = kafkaOpts{}
 	)
 
-	toFlagStringsVar("kafka.server", "Address (host:port) of Kafka server.", "kafka:9092", &opts.uri)
+	// toFlagStringsVar("kafka.server", "Address (host:port) of Kafka server.", "kafka:9092", &opts.uri)
+	kingpin.Flag("kafka.server", "Address (host:port) of Kafka server.").Default("kafka:9092").Envar("KAFKA_SERVER").
+		StringVar(&opts.uri)
 	// toFlagBoolVar("sasl.enabled", "Connect using SASL/PLAIN, default is false.", false, "false", &opts.useSASL)
 	kingpin.Flag("sasl.enabled", "Connect using SASL/PLAIN.").Default("false").Envar("SASL_ENABLED").BoolVar(&opts.useSASL)
 	toFlagBoolVar("sasl.handshake", "Only set this to false if using a non-Kafka SASL proxy, default is true.", true,
